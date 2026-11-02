@@ -1,0 +1,61 @@
+# Local environments and Python caches
+.venv/
+.venv-*/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.egg-info/
+
+# Generated runs and local data
+/outputs/
+/output/
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Credentials and private agent state
+.env
+.env.*
+!.env.example
+!.env.sample
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+.netrc
+.npmrc
+.pypirc
+.claude/
+.codex/
+.agents/
+
+# External repositories; setup and pinned revisions are documented in README.md
+/rax/
+/dexjoco/
+/bench2dex/
+/bench2dex-leaderboard/
+/vendor/
+
+# JavaScript dependencies and generated distributions
+node_modules/
+/dist/
+/build/
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+._*
+Thumbs.db

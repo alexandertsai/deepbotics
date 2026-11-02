@@ -1,0 +1,464 @@
+diff --git a/harness/agent_host.py b/harness/agent_host.py
+index 6da289b..c1d783a 100644
+--- a/harness/agent_host.py
++++ b/harness/agent_host.py
+@@ -33,7 +33,7 @@ HOST_SOCKETS = (Path('/run/docker.sock'), Path('/var/run/docker.sock'), Path('/r
+ # among them the logins a Codex account switcher keeps in ~/.codex/accounts and the GitHub CLI's token.
+ # All of ~/.codex: its logins and keys, provider profiles (which may carry a key), history and transcripts.
+ HOME = Path.home()
+-SECRETS = ('.ssh', '.aws', '.config/gcloud', '.netrc', '.git-credentials', '.config/rax', '.claude',
++SECRETS = ('.ssh', '.aws', '.config/gcloud', '.netrc', '.git-credentials', '.config/rax', '.config/kimirax', '.claude',
+            '.claude.json', '.codex', '.config/gh')
+ # Codex's standalone install under ~/.codex stays readable: Codex re-runs its own binary in the sandbox.
+ CODEX_INSTALL = '.codex/packages'
+@@ -72,7 +72,10 @@ def host_secrets():
+ def reexposed_paths():
+     """Readable inside hidden directories: the Python environments in the runtime (the agent's
+     Python among them) and Codex's own install, which Codex runs inside its sandbox."""
+-    return [path.resolve() for path in (PROJECT/RUNTIME/ENVS, HOME/CODEX_INSTALL) if _exists(path)]
++    paths = (PROJECT/RUNTIME/ENVS, HOME/CODEX_INSTALL)
++    if sys.platform == 'darwin':
++        paths += (Path(sys.prefix), Path(sys.base_prefix))
++    return [path.resolve() for path in paths if _exists(path)]
+ 
+ 
+ def _exists(path):
+@@ -122,7 +125,7 @@ def carve(path, kept):
+ 
+ def repositories():
+     """This checkout and, for a git worktree, the repository it belongs to."""
+-    paths = [PROJECT]
++    paths = [PROJECT.parent if sys.platform == 'darwin' else PROJECT]
+     marker = PROJECT/'.git'
+     if marker.is_file():  # A worktree: "gitdir: <repository>/.git/worktrees/<name>"
+         gitdir = Path(marker.read_text().partition(':')[2].strip())
+@@ -151,6 +154,9 @@ def environment(*, home, workspace, socket, cpus, binary=None):
+ 
+ def deprioritize():
+     """preexec_fn for agent processes; inherited by everything the agent starts."""
++    if sys.platform == 'darwin':
++        os.nice(5)
++        return
+     with open('/proc/self/oom_score_adj', 'w') as stream:
+         stream.write(str(OOM_SCORE_ADJ))
+ 
+@@ -170,7 +176,7 @@ def supervise(command):
+     """Run the agent CLI and, once it exits, end everything it left running. This process
+     adopts the CLI's orphaned descendants (a child subreaper), so a background command that
+     outlived the CLI is still found. Returns the CLI's exit status."""
+-    if ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0):
++    if sys.platform != 'darwin' and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0):
+         raise OSError(ctypes.get_errno(), 'Cannot adopt the agent CLI\'s processes')
+     child = subprocess.Popen(command)
+     for number in (signal.SIGTERM, signal.SIGHUP):
+@@ -197,6 +203,15 @@ def supervise(command):
+ def descendants(pid):
+     """Every live process below `pid` (the CLI's sandboxed commands included)."""
+     found, frontier = [], [pid]
++    if sys.platform == 'darwin':
++        rows = subprocess.check_output(['/bin/ps', '-axo', 'pid=,ppid='], text=True)
++        pairs = [tuple(map(int, row.split())) for row in rows.splitlines() if row.strip()]
++        while frontier:
++            parent = frontier.pop()
++            children = [child for child, ppid in pairs if ppid == parent and child not in found]
++            found.extend(children)
++            frontier.extend(children)
++        return found
+     while frontier:
+         parent = frontier.pop()
+         try:
+@@ -231,6 +246,11 @@ def signal_tree(pid, number):
+ 
+ def start_time(pid):
+     """The kernel's start time of `pid`, which tells it apart from a later process reusing the id."""
++    if sys.platform == 'darwin':
++        stamp = subprocess.check_output(['/bin/ps', '-p', str(pid), '-o', 'lstart='], text=True).strip()
++        if not stamp:
++            raise ProcessLookupError(pid)
++        return int(hashlib.sha256(stamp.encode()).hexdigest()[:15], 16)
+     stat = Path(f'/proc/{pid}/stat').read_text()
+     return int(stat[stat.rindex(')')+2:].split()[19])
+ 
+@@ -245,12 +265,18 @@ def recorded(path):
+     try:
+         pid, started = map(int, Path(path).read_text().split())
+         return pid if start_time(pid) == started else None
+-    except (OSError, ValueError):
++    except (OSError, ValueError, subprocess.CalledProcessError):
+         return None
+ 
+ 
+ def stopped(pid):
+     """True once the kernel has stopped `pid` (or it is gone)."""
++    if sys.platform == 'darwin':
++        try:
++            status = subprocess.check_output(['/bin/ps', '-p', str(pid), '-o', 'stat='], text=True).strip()
++        except subprocess.CalledProcessError:
++            return True
++        return not status or status[0] in 'TtZX'
+     try:
+         stat = Path(f'/proc/{pid}/stat').read_text()
+     except OSError:
+diff --git a/harness/codex_cli/auto_research.py b/harness/codex_cli/auto_research.py
+index c8fbbbd..cbe795d 100644
+--- a/harness/codex_cli/auto_research.py
++++ b/harness/codex_cli/auto_research.py
+@@ -462,6 +462,8 @@ def start_frontend(config, deployed, socket, log, *, key_file=None, timeout=30):
+     if key_file:  # gemini_generate stays brokered by the host frontend.
+         args += ['--key-file', str(key_file)]
+     environment = {k: v for k, v in os.environ.items() if not k.startswith('RAX_')}
++    if 'RAX_ARTIFACT_ROOT' in os.environ:
++        environment['RAX_ARTIFACT_ROOT'] = os.environ['RAX_ARTIFACT_ROOT']
+     environment['PYTHONPATH'] = str(PROJECT)
+     server = subprocess.Popen(args, cwd=PROJECT, env=environment, stdout=log, stderr=log, start_new_session=True)
+     deadline = time.monotonic()+timeout
+diff --git a/scripts/configure_auto_research.py b/scripts/configure_auto_research.py
+index cf4131b..fc4ec8d 100644
+--- a/scripts/configure_auto_research.py
++++ b/scripts/configure_auto_research.py
+@@ -114,8 +114,9 @@ def main():
+         parser.error('--recording-gib must be at least 1')
+     apply_benchmark(parser, args)
+     episode_seconds = benchmark_named(args.benchmark).task_timeouts(args.task)['episode_seconds']
+-    devices = subprocess.check_output(['nvidia-smi', '--query-gpu=index,uuid', '--format=csv,noheader'], text=True)
+-    mapping = {}
++    mac = sys.platform == 'darwin' and args.benchmark == 'dexjoco' and args.sim_gpu == 'mac'
++    devices = '' if mac else subprocess.check_output(['nvidia-smi', '--query-gpu=index,uuid', '--format=csv,noheader'], text=True)
++    mapping = {'mac': 'mac'} if mac else {}
+     for line in devices.splitlines():
+         index, identifier = map(str.strip, line.split(','))
+         mapping[index] = mapping[identifier] = identifier
+diff --git a/services/controller/config.py b/services/controller/config.py
+index 5907dbb..977ef0f 100644
+--- a/services/controller/config.py
++++ b/services/controller/config.py
+@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
+ import math
+ from pathlib import Path
+ import re
++import sys
+ 
+ from services.benchmarks import DEFAULT as DEFAULT_BENCHMARK
+ from services.demonstration_io import DEMONSTRATION_CONTEXTS
+@@ -219,5 +220,7 @@ class Configuration:
+         if not self.sim_gpu:
+             raise ValueError("A simulator GPU is required")
+         for gpu in (self.sim_gpu, *self.formal_sim_gpus):
++            if sys.platform == 'darwin' and self.benchmark == 'dexjoco' and gpu == 'mac':
++                continue
+             if not isinstance(gpu, str) or not re.fullmatch(r"GPU-[a-fA-F0-9-]+", gpu):
+                 raise ValueError("Use an explicit GPU UUID, not an ordinal or 'all'")
+diff --git a/services/controller/formal_worker.py b/services/controller/formal_worker.py
+index 9950ee7..51e0761 100644
+--- a/services/controller/formal_worker.py
++++ b/services/controller/formal_worker.py
+@@ -15,6 +15,8 @@ import signal
+ import socket
+ import subprocess
+ import sys
++import threading
++import time
+ import urllib.error
+ 
+ from .backend import make_backend
+@@ -183,7 +185,8 @@ def main():
+     parser.add_argument('--parent-pid', type=int, required=True)
+     args = parser.parse_args()
+     # Stop, with normal cleanup, if the parent supervisor dies without terminating us.
+-    ctypes.CDLL(None, use_errno=True).prctl(1, signal.SIGTERM)  # PR_SET_PDEATHSIG
++    if sys.platform != 'darwin':
++        ctypes.CDLL(None, use_errno=True).prctl(1, signal.SIGTERM)
+     if os.getppid() != args.parent_pid:
+         raise SystemExit('Parent supervisor exited before the worker started')
+     def stop(*_):
+@@ -191,6 +194,12 @@ def main():
+         signal.signal(signal.SIGTERM, signal.SIG_IGN)
+         raise KeyboardInterrupt
+     signal.signal(signal.SIGTERM, stop)
++    if sys.platform == 'darwin':
++        def watch_parent():
++            while os.getppid() == args.parent_pid:
++                time.sleep(1)
++            os.kill(os.getpid(), signal.SIGTERM)
++        threading.Thread(target=watch_parent, daemon=True).start()
+     state = json.loads((args.parent_root/'state.json').read_text())
+     parent = Configuration.from_dict(state['configuration'])
+     if parent.root != args.parent_root.resolve():
+diff --git a/services/controller/sandbox.py b/services/controller/sandbox.py
+index defe06f..3db8ca8 100644
+--- a/services/controller/sandbox.py
++++ b/services/controller/sandbox.py
+@@ -104,6 +104,10 @@ class BundleSandbox:
+                 workspace_path='code/controller'):
+         """The bundle's Python at the agent's own workspace path: a read-only scaffold with
+         the bundle at its project path, the runtime API, and a writable output directory."""
++        if sys.platform == 'darwin':
++            from .sandbox_macos import command
++            return command(self.limits, bundle, mode, entrypoint, layout=layout, writable=writable,
++                           sdk=sdk, frames=frames, workspace_path=workspace_path)
+         workspace = Path(workspace)
+         project = workspace/project_directory(workspace_path)
+         environment = python_environment()
+@@ -138,13 +142,17 @@ class BundleSandbox:
+     def limit(self):
+         """preexec_fn: the sandbox's memory, file and core limits (inherited by everything in it)."""
+         memory = self.limits.memory_mb*1024*1024
+-        resource.setrlimit(resource.RLIMIT_DATA, (memory, memory))
++        if sys.platform != 'darwin':
++            resource.setrlimit(resource.RLIMIT_DATA, (memory, memory))
+         resource.setrlimit(resource.RLIMIT_FSIZE, (self.limits.artifact_bytes, self.limits.artifact_bytes))
+         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+         resource.setrlimit(resource.RLIMIT_NOFILE, (OPEN_FILES, OPEN_FILES))
+ 
+     def preflight(self):
+-        if not shutil.which('bwrap'):
++        if sys.platform == 'darwin':
++            if not Path('/usr/bin/sandbox-exec').is_file():
++                raise RuntimeError('macOS sandbox-exec is required to run bundles')
++        elif not shutil.which('bwrap'):
+             raise RuntimeError('bubblewrap (bwrap) is required to run bundles')
+         if not (python_environment()/'bin/python').is_file():
+             raise RuntimeError(f'No Python in {python_environment()}')
+diff --git a/services/controller/supervisor.py b/services/controller/supervisor.py
+index 45769ef..a6934ce 100644
+--- a/services/controller/supervisor.py
++++ b/services/controller/supervisor.py
+@@ -9,6 +9,7 @@ from pathlib import Path
+ import signal
+ import socket
+ import subprocess
++import sys
+ import threading
+ import time
+ import uuid
+@@ -100,8 +101,15 @@ def stage_limit(limits, stage, startup_seconds):
+ def _orphaned_worker(root, pid):
+     """Whether ``pid`` is a live formal worker of this session (a reused pid or a zombie is not)."""
+     try:
+-        args = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
+-    except OSError:
++        if sys.platform == 'darwin':
++            import psutil
++            try:
++                args = [part.encode() for part in psutil.Process(pid).cmdline()]
++            except psutil.Error:
++                return False
++        else:
++            args = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
++    except (OSError, ProcessLookupError):
+         return False
+     return (b'services.controller.formal_worker' in args or b'services.agent_formal.worker' in args) \
+         and str(root).encode() in args
+diff --git a/services/dashboard/observations.py b/services/dashboard/observations.py
+index b84ede6..3548011 100644
+--- a/services/dashboard/observations.py
++++ b/services/dashboard/observations.py
+@@ -1,5 +1,6 @@
+ """Read-only native camera snapshots shared by operator views; never robot RPC."""
+ from pathlib import Path
++import sys
+ 
+ from services.benchmarks import EPISODE_SERVERS
+ 
+@@ -7,7 +8,14 @@ from services.benchmarks import EPISODE_SERVERS
+ def process_matches(pid, run_path):
+     try:
+         pid = int(pid)
+-        command = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
++        if sys.platform == 'darwin':
++            import psutil
++            try:
++                command = [part.encode() for part in psutil.Process(pid).cmdline()]
++            except psutil.Error:
++                return False
++        else:
++            command = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
+     except (TypeError, ValueError, OSError):
+         return False
+     return (any(module.encode() in command for module in EPISODE_SERVERS)
+diff --git a/services/dexjoco/process.py b/services/dexjoco/process.py
+index 5308c55..ee57d23 100644
+--- a/services/dexjoco/process.py
++++ b/services/dexjoco/process.py
+@@ -11,6 +11,7 @@ import os
+ import re
+ import signal
+ import subprocess
++import sys
+ import threading
+ import time
+ from contextlib import suppress
+@@ -49,11 +50,18 @@ def simulator_environment(sim_gpu, base=None) -> dict[str, str]:
+     env = dict(os.environ if base is None else base)
+     for name in ("PYTHONHOME", "CONDA_PREFIX", "RAX_AGENT_TRIAL_ID", "PYOPENGL_PLATFORM"):
+         env.pop(name, None)
++    if sys.platform == "darwin":
++        for name in ("CUDA_VISIBLE_DEVICES", "MUJOCO_EGL_DEVICE_ID", "__EGL_VENDOR_LIBRARY_FILENAMES"):
++            env.pop(name, None)
++        env["MUJOCO_GL"] = "glfw"
++    else:
++        env.update({
++            "CUDA_VISIBLE_DEVICES": str(sim_gpu),
++            "MUJOCO_GL": "egl",
++            "PYOPENGL_PLATFORM": "egl",
++            "MUJOCO_EGL_DEVICE_ID": egl_device_index(sim_gpu),
++        })
+     env.update({
+-        "CUDA_VISIBLE_DEVICES": str(sim_gpu),
+-        "MUJOCO_GL": "egl",
+-        "PYOPENGL_PLATFORM": "egl",
+-        "MUJOCO_EGL_DEVICE_ID": egl_device_index(sim_gpu),
+         "PYTHONPATH": str(project_root()),
+         "PYTHONUNBUFFERED": "1",
+         "XDG_RUNTIME_DIR": str(runtime_root() / "xdg-runtime"),
+diff --git a/services/dexjoco/server.py b/services/dexjoco/server.py
+index f4faab8..eb0aa75 100644
+--- a/services/dexjoco/server.py
++++ b/services/dexjoco/server.py
+@@ -32,7 +32,7 @@ def parse_args(argv=None):
+ def main(argv=None):
+     args = parse_args(argv)
+     # As the official evaluation in rgb_array mode.
+-    os.environ.setdefault("MUJOCO_GL", "egl")
++    os.environ.setdefault("MUJOCO_GL", "glfw" if sys.platform == "darwin" else "egl")
+     output = Path(args.output)
+     output.mkdir(parents=True, exist_ok=True)
+ 
+diff --git a/services/dexjoco/session.py b/services/dexjoco/session.py
+index c6eb430..824caae 100644
+--- a/services/dexjoco/session.py
++++ b/services/dexjoco/session.py
+@@ -160,15 +160,36 @@ class DexjocoSession:
+ 
+         # As eval_dexjoco_openpi.main(): global seeds, then the wrapper and its environment.
+         _set_seed(seed)
++        self.viewer_enabled = os.environ.get("RAX_DEXJOCO_VIEWER") == "1"
+         env = DexJoCoOpenPIEnv(
+             env_name=self.info["env_name"], camera_mapping=self.config["camera_mapping"], seed=seed,
+             rand_full=self.info["regime"] == "rand_full", randomize_dynamics=False,
+-            dual_arm=self.info["dual_arm"], prompt=self.config["prompt"], render_mode="rgb_array",
++            dual_arm=self.info["dual_arm"], prompt=self.config["prompt"], render_mode="human" if self.viewer_enabled else "rgb_array",
+             password=self.config.get("password", None))
+         env.start()
+         self.tap = _Tap(env.env)
+         env.env = self.tap
+         self.env = env
++        if self.viewer_enabled:
++            import glfw
++            import mujoco
++            viewer = self.tap.unwrapped._viewer._viewers["human"]
++            viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
++            viewer.cam.lookat[:] = [-0.15, 0.0, 1.1]
++            viewer.cam.distance, viewer.cam.azimuth, viewer.cam.elevation = 1.65, 150, -25
++            phase = "exploration" if self.collection == 0 else "held-out evaluation"
++            glfw.set_window_title(viewer.window, f"DexJoCo fold_glasses - live controller {phase}")
++
++    def render_viewer(self):
++        if getattr(self, "viewer_enabled", False) and self.env is not None:
++            import glfw
++            raw = self.tap.unwrapped
++            viewer = raw._viewer._viewers["human"]
++            if glfw.window_should_close(viewer.window):
++                self.viewer_enabled = False
++                raw.render_mode = "rgb_array"
++                return
++            raw._viewer.render("human")
+ 
+     def _image_keys(self):
+         return [key for key in self.tap.last_obs if key != "state"]
+diff --git a/services/dexjoco/tools.py b/services/dexjoco/tools.py
+index 9293a9f..413cb95 100644
+--- a/services/dexjoco/tools.py
++++ b/services/dexjoco/tools.py
+@@ -193,6 +193,13 @@ def validate_actions(actions, dim=None):
+     for row in actions:
+         reject_unless(isinstance(row, list) and len(row) == width, "all action rows must have the same length")
+         reject_unless(all(_finite(v) for v in row), "action rows must contain finite numbers")
++        for start in range(0, width, 22):
++            reject_unless(all(abs(v) <= 2 for v in row[start:start + 2]) and 0 <= row[start + 2] <= 2.5,
++                          "flange target outside bounded workspace: x/y [-2,2], z [0,2.5] metres")
++            reject_unless(math.hypot(*row[start + 3:start + 6]) <= 2 * math.pi + 1e-6,
++                          "rotation-vector magnitude exceeds 2*pi")
++            reject_unless(all(abs(v) <= math.pi for v in row[start + 6:start + 22]),
++                          "hand targets must be within [-pi,pi] radians")
+ 
+ 
+ def validate_state(state, dim):
+diff --git a/services/simulator/rpc.py b/services/simulator/rpc.py
+index d81801b..6e2dfcb 100644
+--- a/services/simulator/rpc.py
++++ b/services/simulator/rpc.py
+@@ -3,6 +3,7 @@
+ from __future__ import annotations
+ 
+ import json
++import select
+ import signal
+ import socket
+ import traceback
+@@ -49,6 +50,8 @@ def serve(session, port, *, episode_timeout_seconds=0):
+                 raise EpisodeWallTimeout()
+             try:
+                 while True:
++                    while getattr(session, "viewer_enabled", False) and not select.select([connection], [], [], 1 / 30)[0]:
++                        session.render_viewer()
+                     request = receive_packet(connection)
+                     response = {
+                         "version": VERSION,
+diff --git a/services/controller/sandbox_macos.py b/services/controller/sandbox_macos.py
+new file mode 100644
+index 0000000..462fff6
+--- /dev/null
++++ b/services/controller/sandbox_macos.py
+@@ -0,0 +1,51 @@
++"""macOS Seatbelt implementation of RAX's frozen-bundle execution boundary."""
++import json
++from pathlib import Path
++import shutil
++import sys
++
++from .sandbox import frame_path
++from .storage import project_directory
++from harness.agent_host import thread_variables
++
++
++def command(limits, bundle, mode, entrypoint, *, layout, writable, sdk, frames, workspace_path):
++    layout = Path(layout).resolve()
++    project = layout / project_directory(workspace_path)
++    shutil.copytree(bundle, project, dirs_exist_ok=True)
++    (layout / 'api/runtime.py').unlink()
++    shutil.copyfile(sdk, layout / 'api/runtime.py')
++    (layout / 'output').rmdir()
++    (layout / 'output').symlink_to(writable, target_is_directory=True)
++    if frames is not None:
++        destination = layout / frame_path(frames)
++        destination.rmdir()
++        destination.symlink_to(frames, target_is_directory=True)
++    q = lambda path: json.dumps(str(Path(path).resolve()))
++    readable = [layout, Path(writable), Path(sys.prefix), Path(sys.base_prefix)]
++    if frames is not None:
++        readable.append(Path(frames))
++    exceptions = ' '.join(f'(require-not (subpath {q(path)}))' for path in readable)
++    profile = layout.parent / 'sandbox.sb'
++    profile.write_text(f'''(version 1)
++(allow default)
++(deny network*)
++(deny mach-lookup)
++(deny process-fork)
++(deny process-exec (require-not (literal {q(sys.executable)})))
++(deny file-read* (require-all
++    (require-any (subpath {q(Path.home())}) (subpath "/private/tmp") (subpath "/tmp") (subpath "/private/var/folders"))
++    {exceptions}))
++(deny file-write* (require-all (require-not (subpath {q(writable)})) (require-not (subpath "/dev"))))
++''')
++    variables = {'HOME': str(layout), 'PATH': f'{sys.prefix}/bin:/usr/bin:/bin',
++                 'PYTHONPATH': f'{layout}:{project}', 'PYTHONDONTWRITEBYTECODE': '1',
++                 'PYTHONNOUSERSITE': '1', 'PIP_NO_INDEX': '1', 'HF_HUB_OFFLINE': '1',
++                 'WANDB_MODE': 'disabled', 'LANG': 'en_US.UTF-8', **thread_variables(limits.cpus)}
++    runtime = str(layout / 'api/runtime.py')
++    code = ('import os,runpy,sys;os.chdir(' + repr(str(layout)) + ');'
++            'os.environ.clear();os.environ.update(' + repr(variables) + ');'
++            'sys.path[:0]=' + repr([str(layout), str(project)]) + ';'
++            'sys.argv=' + repr([runtime, mode, str(project), entrypoint]) + ';'
++            'runpy.run_path(' + repr(runtime) + ',run_name="__main__")')
++    return ['/usr/bin/sandbox-exec', '-f', str(profile), sys.executable, '-I', '-u', '-c', code]
