@@ -30,6 +30,20 @@ Techniques: fast shared tests, agents copying and improving the best measured de
 
 Evidence is in [`benchmarks/`](benchmarks/).
 
+## Demos
+
+**Task 09: starter, Astra and DeepSeek swarm.** The starter collapses; both finished designs hold pose. ([video](assets/demos/task09-hold.mp4))
+
+![Task 09 lead arms holding pose](assets/demos/task09-hold.gif)
+
+**Task 08: final DeepSeek mobile base.** ([video](assets/demos/task08-base.mp4))
+
+![Task 08 mobile base orbit](assets/demos/task08-base.gif)
+
+**Task 06: final DeepSeek pose estimator on a scored episode.** ([video](assets/demos/task06-pose.mp4))
+
+![Task 06 pose estimation episode](assets/demos/task06-pose.gif)
+
 ## Limitations
 
 - One run of each configuration.
