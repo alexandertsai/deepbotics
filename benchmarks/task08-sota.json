@@ -1,0 +1,30 @@
+{
+  "label": "SOTA",
+  "scope": "Project single-agent raw Astra reference",
+  "task": 8,
+  "agents": 1,
+  "model": "gpt-6-astra",
+  "mode": "raw native codex exec",
+  "reasoning_effort": "max",
+  "score": 63.71,
+  "status": "completed",
+  "development_budget_seconds": 900,
+  "native_agent_seconds": 905.3593010000186,
+  "final_seconds": 342.16816262499196,
+  "reported_tokens": 2332636,
+  "token_usage": {
+    "input_tokens": 2300141,
+    "cached_input_tokens": 2234880,
+    "output_tokens": 32495,
+    "reasoning_output_tokens": 20302,
+    "total_tokens": 2332636
+  },
+  "usage_status": "partial_recorded_lower_bound",
+  "api_equivalent_cost_is_lower_bound": true,
+  "request_records": 37,
+  "agent_returncode": -9,
+  "artifact_sha256": "e7620110b562bb26738e8afafb6b5abecaa23513ff36957710e75e502c162c90",
+  "api_equivalent_cost_usd": 4.512239999999999,
+  "actual_subscription_charge_usd": null,
+  "run": "outputs/task06-task08-astra-repaired-20261102-01/task08"
+}

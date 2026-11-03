@@ -1,0 +1,94 @@
+{
+  "task": 6,
+  "deepseek": {
+    "provider_attempts": 261,
+    "estimated_api_cost_usd": 0.9614335320000001,
+    "reported_tokens": 6359960,
+    "token_usage": {
+      "input_tokens": 1952491,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 4114972,
+      "output_tokens": 292497
+    },
+    "pacing_wait_seconds": 139.6452595939627,
+    "queue_seconds": 1087.7888239567983,
+    "rate_limited_attempts": 0,
+    "accounts": [
+      "account-1",
+      "account-2",
+      "account-3"
+    ],
+    "models": [
+      "accounts/fireworks/models/deepseek-v4p1-flash-1017"
+    ],
+    "account_count": 3,
+    "logical_model_turns": 261,
+    "actual_model_workers": 14,
+    "peak_concurrent_api_requests": 6,
+    "agents": 14,
+    "coordinators": 2,
+    "development_budget_seconds": 900,
+    "development_and_freeze_seconds": 851.3599882125854,
+    "score": 32.08,
+    "status": "completed",
+    "final_seconds": 268.84048395900754,
+    "run": "outputs/task06-task08-deepseek-final-20261102-01/task06/deepseek",
+    "selection": {
+      "worker": "f6_shape_identity",
+      "index": 2,
+      "public_selection_score": 0.10209196820993265,
+      "selection_basis": "original_public_aggregate",
+      "original_public_metric_score": 0.21703660201908412,
+      "used_private_scores": false,
+      "manifest": {
+        "files": {
+          "estimator.py": "ef172732024966dc8311ee93b45e355651ee0766a0bcba521084fa99be3db6ea",
+          "templates.npz": "e6dff932844f11ba5076647b91c5ace88ef336fd4575f0f6fb35108b39e1fe7b",
+          "vision.py": "ac5713d04b00adc869ffbb0a61958645da845bc9d6ec68367d184ef4883b9125"
+        },
+        "bytes": 22850,
+        "runtime_sha256": "b2241c2e8f7cb784496c938d73974819c44fdc777173ece6e3d35ab6ded5ab88",
+        "workspace_path": "code/task06",
+        "sha256": "19b0ed0a75bffeeb78e5ce6026c04f1b42982fce0d1beced63647230c1289c36"
+      }
+    },
+    "starting_candidate_sha256": "bdc709d2894c50c31404b7df213efb7ee4dcd0162b6ef52b361a8638c8052f54"
+  },
+  "astra": {
+    "agents": 1,
+    "model": "gpt-6-astra",
+    "mode": "raw native codex exec",
+    "reasoning_effort": "max",
+    "score": 89.53,
+    "status": "completed",
+    "development_budget_seconds": 900,
+    "native_agent_seconds": 905.3955117079895,
+    "final_seconds": 219.80307166703278,
+    "reported_tokens": 1692286,
+    "token_usage": {
+      "input_tokens": 1664758,
+      "cached_input_tokens": 1610240,
+      "output_tokens": 27528,
+      "reasoning_output_tokens": 13769,
+      "total_tokens": 1692286
+    },
+    "usage_status": "partial_recorded_lower_bound",
+    "api_equivalent_cost_is_lower_bound": true,
+    "request_records": 39,
+    "agent_returncode": -9,
+    "artifact_sha256": "943a6c435ec48475fd57a88012522a8acb700a36c85c3c8bb9fd1d7ba03f9d93",
+    "api_equivalent_cost_usd": 3.53182,
+    "actual_subscription_charge_usd": null,
+    "run": "outputs/task06-task08-astra-repaired-20261102-01/task06"
+  },
+  "comparison_scope": "task06: final engineered fourteen-agent DeepSeek retry from prepared own-DeepSeek/public starting candidates versus the saved single raw native Codex Astra reference; 15-minute development budgets.",
+  "cost_scope": "DeepSeek estimated API spend and Astra standard API-equivalent estimate; local compute excluded.",
+  "created_at": 1793665151.911007,
+  "deepseek_points_ahead": -57.45,
+  "winner": "astra",
+  "run_type": "final_retry_with_prepared_starting_candidates_and_rebuilt_harness",
+  "previous_deepseek_score": 13.3,
+  "deepseek_improvement_points": 18.779999999999998,
+  "preparation": "outputs/final-deepseek-preparation-20261102",
+  "failure_analysis": "outputs/task06-task08-deepseek-final-20261102-01/preparation.json"
+}

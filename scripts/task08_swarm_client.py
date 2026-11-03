@@ -404,6 +404,9 @@ class SharedClient:
                 os.killpg(process.pid, signal.SIGTERM)
             except ProcessLookupError:
                 return
+            except PermissionError:
+                if process.poll() is None:
+                    process.terminate()
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
@@ -411,6 +414,9 @@ class SharedClient:
                     os.killpg(process.pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
+                except PermissionError:
+                    if process.poll() is None:
+                        process.kill()
                 process.wait(timeout=5)
 
     def run_worker(self, session, worker_id, max_calls=None):

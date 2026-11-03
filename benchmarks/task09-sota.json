@@ -1,0 +1,29 @@
+{
+  "label": "SOTA",
+  "scope": "Project single-agent raw Astra reference",
+  "task": 9,
+  "model": "gpt-6-astra",
+  "agents": 1,
+  "reasoning_effort": "max",
+  "run": "outputs/task09-astra-raw-sota-20261102-01",
+  "score": 53.1533,
+  "total_wall_seconds": 891.9822583198547,
+  "usage_status": "complete_turn",
+  "usage": {
+    "input_tokens": 1100180,
+    "cached_input_tokens": 1051264,
+    "output_tokens": 25439,
+    "reasoning_output_tokens": 12577,
+    "total_tokens": 1125619
+  },
+  "api_equivalent_estimate_usd": 2.812374,
+  "standard_credit_equivalent": 70.30935,
+  "subscription_invoice_charge_usd": null,
+  "cost_scope": "Standard API and credit equivalents of recorded subscription token usage; local compute excluded.",
+  "artifact_sha256": "49020f1d5fc9dc279d7b1e471539f282f2c75ab3af24c13c3f6648fc05d2cbda",
+  "updated_at": 1793660488.237453,
+  "native_agent_seconds": 809.9470000267029,
+  "official_final_seconds": 53.29341133299749,
+  "token_accounting_reconciles": true,
+  "comparison": "benchmarks/task09-comparison.json"
+}
