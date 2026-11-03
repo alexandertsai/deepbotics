@@ -1,0 +1,46 @@
+{
+  "task": 9,
+  "sota_reference": "benchmarks/task09-sota.json",
+  "deepseek": {
+    "score": 61.1033,
+    "agents": 14,
+    "elapsed_seconds": 528.4990598750301,
+    "estimated_api_cost_usd": 1.552668288,
+    "run": "outputs/task09-team14-15min-20261102-01",
+    "reported_tokens": 17179618,
+    "token_usage": {
+      "cache_read_input_tokens": 13792948,
+      "cache_creation_input_tokens": 0,
+      "input_tokens": 2882326,
+      "output_tokens": 504344
+    }
+  },
+  "astra": {
+    "score": 53.1533,
+    "agents": 1,
+    "mode": "raw codex exec",
+    "reasoning_effort": "max",
+    "elapsed_seconds": 891.9822583198547,
+    "native_agent_seconds": 809.9470000267029,
+    "official_final_seconds": 53.29341133299749,
+    "agent_plus_final_seconds_excluding_packaging": 863.2404113597004,
+    "other_host_overhead_seconds": 28.741846960154362,
+    "api_equivalent_cost_usd": 2.812374,
+    "actual_subscription_charge_usd": null,
+    "request_records": 22,
+    "token_accounting_reconciles": true,
+    "run": "outputs/task09-astra-raw-sota-20261102-01",
+    "reported_tokens": 1125619
+  },
+  "deepseek_points_ahead": 7.949999999999996,
+  "deepseek_relative_score_improvement_percent": 14.956738339858466,
+  "deepseek_lower_estimated_inference_cost_percent": 44.791543087797,
+  "deepseek_faster_percent_excluding_astra_packaging": 38.77730317993514,
+  "cost_scope": "DeepSeek estimated API spend and Astra standard API-equivalent estimate; local compute excluded.",
+  "comparison_scope": "Task 09: fourteen DeepSeek agents with a custom harness versus one raw native Codex Astra agent.",
+  "same_official_verifier_image_id": "sha256:ddf678eb78336c9d961fe73a9d0fa1a97983f5098ec14d4c9914f6a4b4d586c1",
+  "both_original_public_starter": true,
+  "no_deepseek_solution_supplied_to_astra": true,
+  "raw_astra_mcp_tools": false,
+  "created_at": 1793660543.048766
+}

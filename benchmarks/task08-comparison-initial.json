@@ -1,0 +1,87 @@
+{
+  "task": 8,
+  "deepseek": {
+    "provider_attempts": 285,
+    "estimated_api_cost_usd": 1.6587068759999988,
+    "reported_tokens": 10110918,
+    "token_usage": {
+      "input_tokens": 2836475,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 6694246,
+      "output_tokens": 580197
+    },
+    "pacing_wait_seconds": 3657.404061669542,
+    "queue_seconds": 1799.6997392060002,
+    "rate_limited_attempts": 0,
+    "accounts": [
+      "account-1",
+      "account-2",
+      "account-3"
+    ],
+    "models": [
+      "accounts/fireworks/models/deepseek-v4p1-flash-1017"
+    ],
+    "account_count": 3,
+    "logical_model_turns": 285,
+    "actual_model_workers": 14,
+    "peak_concurrent_api_requests": 8,
+    "agents": 14,
+    "coordinators": 2,
+    "development_budget_seconds": 900,
+    "development_and_freeze_seconds": 901.5383548736572,
+    "score": 38.39,
+    "status": "completed",
+    "final_seconds": 150.51962737500435,
+    "run": "outputs/task06-task08-parallel-15m-20261102-01/task08/deepseek",
+    "selection": {
+      "worker": "b8_base_motion",
+      "index": 5,
+      "public_score": 0.34413264760973056,
+      "used_private_scores": false,
+      "manifest": {
+        "files": {
+          "MUJOCO_LOG.TXT": "e1d981ebde66549d41168f268fe66e03aac463d904da26819d77faa0c8f0bea6",
+          "__pycache__/controller.cpython-312.pyc": "1de0141d0d5864636d55c1572f3d04c1a1b2a1dbe6d4d90060193b3ef79ffe1d",
+          "controller.py": "78807a91ccb4844c30b1271c8c7d614a51c26e230c6b44b14a00a16e1f7b2296",
+          "robot.xml": "07207896d0abdebb4f9e01d2a0a344075f1286413c957cb005c3970eb7b9e4b4"
+        },
+        "bytes": 57705,
+        "runtime_sha256": "b2241c2e8f7cb784496c938d73974819c44fdc777173ece6e3d35ab6ded5ab88",
+        "workspace_path": "code/task08",
+        "sha256": "b8ae4135e603a7194904f2896fa9d33de9032fc47196026ff29bd5143359b153"
+      }
+    }
+  },
+  "astra": {
+    "agents": 1,
+    "model": "gpt-6-astra",
+    "mode": "raw native codex exec",
+    "reasoning_effort": "max",
+    "score": 63.71,
+    "status": "completed",
+    "development_budget_seconds": 900,
+    "native_agent_seconds": 905.3593010000186,
+    "final_seconds": 342.16816262499196,
+    "reported_tokens": 2332636,
+    "token_usage": {
+      "input_tokens": 2300141,
+      "cached_input_tokens": 2234880,
+      "output_tokens": 32495,
+      "reasoning_output_tokens": 20302,
+      "total_tokens": 2332636
+    },
+    "usage_status": "partial_recorded_lower_bound",
+    "api_equivalent_cost_is_lower_bound": true,
+    "request_records": 37,
+    "agent_returncode": -9,
+    "artifact_sha256": "e7620110b562bb26738e8afafb6b5abecaa23513ff36957710e75e502c162c90",
+    "api_equivalent_cost_usd": 4.512239999999999,
+    "actual_subscription_charge_usd": null,
+    "run": "outputs/task06-task08-astra-repaired-20261102-01/task08"
+  },
+  "comparison_scope": "task08: fourteen DeepSeek agents with a custom harness versus one raw native Codex Astra agent; 15 minutes development each.",
+  "cost_scope": "DeepSeek estimated API spend and Astra standard API-equivalent estimate; local compute excluded.",
+  "created_at": 1793662947.773275,
+  "deepseek_points_ahead": -25.32,
+  "winner": "astra"
+}

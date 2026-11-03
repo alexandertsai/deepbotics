@@ -1,0 +1,133 @@
+{
+  "task": 7,
+  "status": "prepared_but_public_simulation_timed_out",
+  "objective": "Engineer a DeepSeek system that clears more parts than a single raw Codex Astra baseline on a declared short public test.",
+  "scope": "Short public benchmark variant; no official full-task or global SOTA claim.",
+  "astra_baseline": {
+    "agents": 1,
+    "mode": "plain native codex exec",
+    "engineered_mcp_tools": false,
+    "fresh_task07_raw_control_not_yet_run": true,
+    "historical_wrapped_astra_seed35_10s_clear_frac": 0.08333333333333333,
+    "historical_control_is_not_a_raw_codex_run": true
+  },
+  "deepseek": {
+    "agents": 14,
+    "roles": [
+      [
+        "perception_coordinator",
+        "Assign distinct perception/contact experiments and integrate measured findings."
+      ],
+      [
+        "motion_coordinator",
+        "Coordinate reachable motion, release, recovery and measured final integration."
+      ],
+      [
+        "camera_geometry",
+        "Backproject overhead depth using published calibration and reject bin walls."
+      ],
+      [
+        "surface_selection",
+        "Choose exposed reachable contact patches and avoid repeated failed targets."
+      ],
+      [
+        "ik_validation",
+        "Validate arm_grip site, joint dimensions, orientation and gravity compensation."
+      ],
+      [
+        "contact_approach",
+        "Implement slow final descent and contact electromagnet engagement."
+      ],
+      [
+        "pickup_detection",
+        "Use published force-torque observations to verify stable carried load."
+      ],
+      [
+        "safe_transit",
+        "Clear the rim and move above the conveyor without floor drops or bin strikes."
+      ],
+      [
+        "singulation",
+        "Separate nested brackets before releasing into the single-part nest."
+      ],
+      [
+        "nest_release",
+        "Place one bracket within the published nest and wait for settling."
+      ],
+      [
+        "recovery",
+        "Detect failed pickups and blocked nests; recover without repeated strikes."
+      ],
+      [
+        "cycle_timing",
+        "Reduce overhead while retaining stable contact and release."
+      ],
+      [
+        "contract_regression",
+        "Prevent import, reset, ndarray and control-shape failures."
+      ],
+      [
+        "integration",
+        "Combine tested complete-cycle components and regress the frozen final version."
+      ]
+    ],
+    "accounts": 3,
+    "required_pool": "scripts/short_pilot_pool.py",
+    "max_api_concurrency_per_account": 3,
+    "max_output_tokens": 8192,
+    "shared_estimated_api_guard_usd": 10,
+    "same_total_guard_across_all_accounts": true,
+    "pacing_fallback_tpm_per_account": {
+      "prompt": 500000,
+      "uncached": 250000,
+      "generated": 60000
+    },
+    "reported_rate_target_fraction": 0.9,
+    "routing_lesson": "Account one had almost all Task09 pacing wait; use fewer long-context conversations there at initial assignment when header-informed capacity permits. Never migrate a live conversation."
+  },
+  "timing": {
+    "hard_total_seconds": 300,
+    "development_seconds": 240,
+    "public_check_timeout_seconds": 45,
+    "full_official_verification": false,
+    "abort_conditions": [
+      "Any stage misses its wall deadline.",
+      "Public simulations leave insufficient time for selection and reporting."
+    ],
+    "no_automatic_retry_or_second_paid_run": true
+  },
+  "development": {
+    "cheap_interface_check": "scripts/task07_fastcheck.py",
+    "interface_check_is_not_task_reward": true,
+    "first_real_probe_by_agent_response": 3,
+    "public_episode_seconds": 10,
+    "initial_public_seed": 35,
+    "max_new_episodes_per_executor": 1,
+    "reserved_integration_episodes": 2,
+    "simulation_concurrency": 4,
+    "cpu_limit_per_simulation": 2,
+    "memory_limit_gib_per_simulation": 1,
+    "final_public_battery_if_time_permits": {
+      "seeds": [
+        35,
+        307,
+        101
+      ],
+      "seconds_per_seed": 10
+    },
+    "selection": "Prefer fault-free measured actual clearances with reported penalties; never call successful imports or force readings a task win.",
+    "runtime_inputs": "Published RGB-D, qpos/qvel, force-torque and calibration only; no privileged part poses or hidden seeds.",
+    "no_astra_solutions_supplied": true
+  },
+  "verified_preparation": {
+    "contracts_report": "outputs/task07-fast-preparation-20261102/contracts/summary.json",
+    "four_contract_cases_wall_seconds": 0.9477234579971991,
+    "two_original_deepseek_policies_failed": true,
+    "two_operator_repaired_copies_passed": true,
+    "model_calls_during_preparation": 0,
+    "repairs": "outputs/task07-fast-preparation-20261102/operator-repairs.json",
+    "old_full_verification_stopped": "outputs/task07-short-01/operator-stop-20261102.json",
+    "short_probe_results": "outputs/task07-fast-preparation-20261102/public-preparation-results.json"
+  },
+  "remaining_time_decision": "Pause Task07 after both bounded public probes timed out; no paid DeepSeek run launched."
+}
